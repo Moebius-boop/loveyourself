@@ -1,0 +1,404 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LOVE YOURSELF</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: "Microsoft YaHei", "SimHei", sans-serif;
+        }
+        
+        body {
+            background: #0a0a2a;
+            min-height: 100vh;
+            overflow: hidden;
+            position: relative;
+            cursor: pointer;
+        }
+        
+        /* 星空背景 */
+        #stars {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 1;
+        }
+        
+        .star {
+            position: absolute;
+            background-color: white;
+            border-radius: 50%;
+        }
+        
+        /* 主对话窗口样式 */
+        #dialog-window {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 425px;
+            height: 175px;
+            background-color: rgba(0, 0, 0, 0.7);
+            border-radius: 10px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            color: white;
+            font-size: 24px;
+            text-align: center;
+            padding: 20px;
+            z-index: 100;
+            opacity: 0;
+            transition: opacity 0.3s, transform 0.3s;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(5px);
+        }
+        
+        /* 关怀提示框样式 */
+        .message-box {
+            position: absolute;
+            width: 280px;
+            padding: 18px;
+            border-radius: 12px;
+            box-shadow: 0 5px 20px rgba(0, 0, 0, 0.4);
+            text-align: center;
+            font-size: 20px;
+            font-weight: bold;
+            transition: transform 0.3s, opacity 0.3s ease-in-out;
+            opacity: 0;
+            z-index: 10;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            backdrop-filter: blur(3px);
+        }
+        
+        .message-box:hover {
+            transform: scale(1.1);
+            z-index: 20;
+        }
+        
+        /* 玫瑰花海样式 */
+        #rose-garden {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 50;
+            display: none;
+            pointer-events: none;
+            background: url('https://ts1.tc.mm.bing.net/th/id/R-C.dbc42da922e4d1a079a926e30098d399?rik=GUAMem1Nsg62IA&riu=http%3a%2f%2fwww.pixelstalk.net%2fwp-content%2fuploads%2f2016%2f04%2fPink-rose-pictures-bouquet.jpg&ehk=lQiDx%2b1J8voNYm2wvAheLzFtJuJMapeFQXq%2btYSXP0k%3d&risl=&pid=ImgRaw&r=0') center/cover no-repeat;
+            opacity: 0;
+            transition: opacity 1s ease-in-out;
+        }
+        
+        /* 响应式调整 */
+        @media (max-width: 768px) {
+            #dialog-window {
+                width: 300px;
+                height: 150px;
+                font-size: 18px;
+            }
+            
+            .message-box {
+                width: 240px;
+                font-size: 18px;
+                padding: 15px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- 星空背景 -->
+    <div id="stars"></div>
+    
+    <!-- 主对话窗口 -->
+    <div id="dialog-window"></div>
+    
+    <!-- 关怀提示容器 -->
+    <div id="messages-container"></div>
+    
+    <!-- 玫瑰花海 -->
+    <div id="rose-garden"></div>
+    
+    <!-- 音频元素 -->
+    <audio id="bg-music" loop>
+        <source src="https://assets.mixkit.co/music/preview/mixkit-a-very-happy-christmas-897.mp3" type="audio/mpeg">
+    </audio>
+
+    <script>
+        // 对话内容（只有7句）
+        const dialogs = [
+            "在忙嘛？",
+            "有没有想我？",
+            "我不在的时候有没有好好吃饭？",
+            "天气冷了，多加衣服呀",
+            "要对自己好一点啊！",
+            "想我了的话记得看看天空",
+            "我一直都在..."
+        ];
+        
+        // 关怀文本 - 大幅增加重复和续写
+        const messages = [
+            "按时吃饭呀", "Take care always", "天凉多穿衣", "累了就歇歇",
+            "记得多喝水", "Did you sleep well?", "别熬夜啦", "出门带雨伞", "路上慢一点",
+            "I miss you so", "压力别太大", "开心最重要", "多吃点蔬果", "不舒服说哦",
+            "Don't push hard", "记得想我呀", "注意防晒呀", "忙完报平安", "Have a nice day",
+            "一切都会好", "别吃太冰的", "好好照顾自己", "睡前泡泡脚", "工作别太累",
+            "You are safe now", "记得添衣物", "饿了就加餐", "雨天别出门", "保持好心情",
+            "I'm here for you", "别太焦虑啦", "多喝温热水", "想你啦宝贝", "记得吃早餐", "早点休息呀",
+            "Take it easy dear", "出门戴口罩", "累了靠靠我", "别忘吃 meds", "今天开心吗",
+            "You matter to me", "天热防中暑", "别省着吃饭", "遇事别硬扛", "记得常联系",
+            "Rest well tonight", "降温添衣服", "别熬夜追剧", "记得润嗓子", "有我陪着你",
+            "You're not alone", "少吃辛辣的", "多喝热汤呀", "别太累自己",
+            "Sleep tight dear", "雨天路小心", "按时吃药呀", "保持好心态", "Wish you well always",
+            // 新增和重复的关怀语
+            "按时吃饭呀", "天凉多穿衣", "记得多喝水", "别熬夜啦", 
+            "压力别太大", "开心最重要", "好好照顾自己", "工作别太累",
+            "记得添衣物", "保持好心情", "多喝温热水", "记得吃早餐",
+            "早点休息呀", "今天开心吗", "记得常联系", "有我陪着你",
+            "别太累自己", "保持好心态", "一切都会好", "明天会更好",
+            "你是最棒的", "我支持你", "相信自己", "勇敢前行",
+            "微笑面对", "心要放宽", "别太在意", "做你自己",
+            "你很特别", "值得被爱", "保持希望", "阳光总在",
+            "温暖如你", "光芒万丈", "初心不忘", "方得始终",
+            "累了休息", "别太勉强", "适当放松", "你很珍贵",
+            "世界美好", "因为有你", "快乐简单", "珍惜当下",
+            "心若向阳", "无畏悲伤", "勇敢坚强", "未来可期",
+            "你是唯一", "无可替代", "永远支持", "一直爱你",
+            "照顾好自己", "别太辛苦", "适当休息", "健康第一",
+            "心情愉快", "笑口常开", "幸福常在", "美好永驻",
+            "平安喜乐", "万事顺意", "心想事成", "梦想成真",
+            "天天开心", "时时快乐", "分分幸福", "秒秒安康"
+        ];
+        
+        // 颜色方案
+        const COLORS = [
+            {bg: "rgba(255, 234, 167, 0.85)", text: "#2D3436"},
+            {bg: "rgba(253, 121, 168, 0.85)", text: "#FFFFFF"},
+            {bg: "rgba(116, 185, 255, 0.85)", text: "#FFFFFF"},
+            {bg: "rgba(85, 239, 196, 0.85)", text: "#2D3436"},
+            {bg: "rgba(162, 155, 254, 0.85)", text: "#FFFFFF"},
+            {bg: "rgba(255, 118, 117, 0.85)", text: "#FFFFFF"},
+            {bg: "rgba(253, 203, 110, 0.85)", text: "#2D3436"},
+            {bg: "rgba(225, 112, 85, 0.85)", text: "#FFFFFF"},
+            {bg: "rgba(0, 184, 148, 0.85)", text: "#FFFFFF"},
+            {bg: "rgba(108, 92, 231, 0.85)", text: "#FFFFFF"}
+        ];
+        
+        // DOM元素
+        const starsContainer = document.getElementById('stars');
+        const dialogWindow = document.getElementById('dialog-window');
+        const messagesContainer = document.getElementById('messages-container');
+        const roseGarden = document.getElementById('rose-garden');
+        const bgMusic = document.getElementById('bg-music');
+        
+        // 状态变量
+        let currentDialogIndex = 0;
+        let isPlaying = false;
+        let messagesStarted = false;
+        let totalMessagesCreated = 0;
+        let totalMessagesToCreate = 400; // 增加到400个框框
+        let allMessagesDisplayed = false;
+        
+        // 创建星空背景
+        function createStars() {
+            const starsCount = 200;
+            
+            for (let i = 0; i < starsCount; i++) {
+                const star = document.createElement('div');
+                star.className = 'star';
+                
+                // 随机大小
+                const size = Math.random() * 3;
+                star.style.width = `${size}px`;
+                star.style.height = `${size}px`;
+                
+                // 随机位置
+                star.style.left = `${Math.random() * 100}%`;
+                star.style.top = `${Math.random() * 100}%`;
+                
+                // 随机透明度
+                star.style.opacity = Math.random() * 0.8 + 0.2;
+                
+                starsContainer.appendChild(star);
+            }
+        }
+        
+        // 显示当前对话
+        function showCurrentDialog() {
+            if (currentDialogIndex < dialogs.length) {
+                // 更新文本
+                dialogWindow.textContent = dialogs[currentDialogIndex];
+                
+                // 随机位置
+                const left = 20 + Math.random() * 60;
+                const top = 20 + Math.random() * 60;
+                dialogWindow.style.left = `${left}%`;
+                dialogWindow.style.top = `${top}%`;
+                
+                // 显示动画
+                dialogWindow.style.opacity = '0';
+                dialogWindow.style.transform = 'translate(-50%, -50%) scale(0.8)';
+                
+                setTimeout(() => {
+                    dialogWindow.style.opacity = '1';
+                    dialogWindow.style.transform = 'translate(-50%, -50%) scale(1)';
+                }, 50);
+            } else {
+                // 所有对话结束，开始显示关怀提示
+                dialogWindow.style.opacity = '0';
+                if (!messagesStarted) {
+                    messagesStarted = true;
+                    showMessages();
+                }
+            }
+        }
+        
+        // 点击切换到下一个对话
+        function nextDialog() {
+            if (currentDialogIndex < dialogs.length) {
+                // 淡出当前对话
+                dialogWindow.style.opacity = '0';
+                
+                // 延迟后显示下一个对话
+                setTimeout(() => {
+                    currentDialogIndex++;
+                    showCurrentDialog();
+                }, 300);
+            }
+        }
+        
+        // 显示关怀提示
+        function showMessages() {
+            console.log('开始显示关怀提示');
+            // 创建所有提示框，使用中速15ms间隔
+            for (let i = 0; i < totalMessagesToCreate; i++) {
+                createMessageBox(i);
+            }
+        }
+        
+        // 创建关怀提示框
+        function createMessageBox(index) {
+            setTimeout(() => {
+                const messageBox = document.createElement('div');
+                messageBox.className = 'message-box';
+                
+                // 完全随机位置，确保覆盖边缘
+                const left = Math.random() * (window.innerWidth + 400) - 200;
+                const top = Math.random() * (window.innerHeight + 300) - 150;
+                
+                messageBox.style.left = `${left}px`;
+                messageBox.style.top = `${top}px`;
+                messageBox.style.width = '280px';
+                
+                // 随机颜色
+                const color = COLORS[Math.floor(Math.random() * COLORS.length)];
+                messageBox.style.backgroundColor = color.bg;
+                messageBox.style.color = color.text;
+                
+                // 随机文本
+                const randomText = messages[Math.floor(Math.random() * messages.length)];
+                messageBox.textContent = randomText;
+                
+                // 随机旋转角度，让布局更自然
+                const rotation = Math.random() * 8 - 4;
+                messageBox.style.transform = `rotate(${rotation}deg)`;
+                
+                messagesContainer.appendChild(messageBox);
+                
+                // 快速淡入 (0.3秒)
+                setTimeout(() => {
+                    messageBox.style.opacity = '1';
+                }, 50);
+                
+                totalMessagesCreated++;
+                
+                // 检查是否所有消息都已创建
+                if (totalMessagesCreated === totalMessagesToCreate && !allMessagesDisplayed) {
+                    allMessagesDisplayed = true;
+                    console.log('所有框框创建完成，准备淡出');
+                    // 所有框框显示完后停留1秒，然后淡出
+                    setTimeout(() => {
+                        fadeOutAllMessages();
+                    }, 1000);
+                }
+                
+            }, index * 15); // 中速15ms间隔
+        }
+        
+        // 淡出所有消息框
+        function fadeOutAllMessages() {
+            console.log('开始淡出所有消息框');
+            const messageBoxes = document.querySelectorAll('.message-box');
+            
+            // 所有框框同时快速淡出 (0.3秒)
+            messageBoxes.forEach(box => {
+                box.style.opacity = '0';
+            });
+            
+            // 淡出完成后清屏并显示玫瑰花
+            setTimeout(() => {
+                console.log('清屏并显示玫瑰花');
+                messagesContainer.innerHTML = '';
+                showRoseGarden();
+            }, 300);
+        }
+        
+        // 显示玫瑰花海
+        function showRoseGarden() {
+            console.log('显示玫瑰花海函数被调用');
+            // 确保玫瑰花容器可见
+            roseGarden.style.display = 'block';
+            
+            // 使用setTimeout确保DOM更新
+            setTimeout(() => {
+                roseGarden.style.opacity = '1';
+                console.log('玫瑰花海透明度设置为1');
+            }, 50);
+        }
+        
+        // 初始化
+        function init() {
+            console.log('应用初始化');
+            // 创建星空背景
+            createStars();
+            
+            // 自动播放音乐
+            const playMusic = () => {
+                bgMusic.play().then(() => {
+                    console.log('音乐开始播放');
+                    isPlaying = true;
+                }).catch(e => {
+                    console.log('音频自动播放被阻止:', e);
+                    // 添加用户交互后播放
+                    document.addEventListener('click', function() {
+                        if (!isPlaying) {
+                            bgMusic.play();
+                            isPlaying = true;
+                        }
+                    }, { once: true });
+                });
+            };
+            
+            // 延迟后开始播放音乐
+            setTimeout(playMusic, 1000);
+            
+            // 显示第一个对话
+            showCurrentDialog();
+            
+            // 点击页面切换对话
+            document.body.addEventListener('click', nextDialog);
+        }
+        
+        // 页面加载完成后初始化
+        window.addEventListener('load', init);
+    </script>
+</body>
+</html>
